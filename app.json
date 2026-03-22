@@ -1,7 +1,7 @@
 {
   "expo": {
     "name": "Lorna's Honey-Do List",
-    "slug": "CCodeMobile",
+    "slug": "lornas-honey-do",
     "version": "1.0.0",
     "orientation": "portrait",
     "icon": "./assets/icon.png",
@@ -28,7 +28,11 @@
       "shortName": "Honey-Do",
       "description": "Lorna's household task manager",
       "themeColor": "#E8A933",
-      "backgroundColor": "#FFFDF7"
+      "backgroundColor": "#FFFDF7",
+      "bundler": "metro"
+    },
+    "experiments": {
+      "baseUrl": "/lornas-honey-do"
     }
   }
 }
