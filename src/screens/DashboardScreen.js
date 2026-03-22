@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef, useEffect } from 'react';
+import React, { useState, useCallback, useRef } from 'react';
 import {
   View,
   Text,
@@ -32,83 +32,27 @@ const SORT_OPTIONS = [
 
 const effortOrder = { quick: 0, easy: 1, medium: 2, hard: 3, project: 4 };
 
-// Simple animated bar
-const AnimatedBar = ({ value, maxValue, color, label, delay = 0 }) => {
-  const widthAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(widthAnim, {
-      toValue: maxValue > 0 ? (value / maxValue) * 100 : 0,
-      duration: 800,
-      delay,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
-    }).start();
-  }, [value, maxValue]);
-
+// Simple status bar (no animation - plain View)
+function StatusBar({ label, value, maxValue, color }) {
+  const pct = maxValue > 0 ? Math.max((value / maxValue) * 100, 2) : 0;
   return (
-    <View style={barStyles.row}>
-      <Text style={barStyles.label}>{label}</Text>
-      <View style={barStyles.track}>
-        <Animated.View
-          style={[barStyles.fill, {
-            backgroundColor: color,
-            width: widthAnim.interpolate({
-              inputRange: [0, 100],
-              outputRange: ['0%', '100%'],
-            }),
-          }]}
-        />
+    <View style={sb.row}>
+      <Text style={sb.label}>{label}</Text>
+      <View style={sb.track}>
+        <View style={[sb.fill, { width: `${pct}%`, backgroundColor: color }]} />
       </View>
-      <Text style={barStyles.value}>{value}</Text>
+      <Text style={sb.value}>{value}</Text>
     </View>
   );
-};
+}
 
-const barStyles = StyleSheet.create({
-  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  label: { fontSize: 12, color: COLORS.textLight, width: 70 },
-  track: { flex: 1, height: 16, backgroundColor: COLORS.textMuted + '18', borderRadius: 8, overflow: 'hidden', marginHorizontal: 8 },
-  fill: { height: '100%', borderRadius: 8, minWidth: 2 },
-  value: { fontSize: 14, fontWeight: '800', color: COLORS.text, width: 28, textAlign: 'right' },
+const sb = StyleSheet.create({
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 10 },
+  label: { fontSize: 13, color: COLORS.textLight, width: 80, fontWeight: '500' },
+  track: { flex: 1, height: 18, backgroundColor: COLORS.textMuted + '18', borderRadius: 9, overflow: 'hidden', marginHorizontal: 8 },
+  fill: { height: '100%', borderRadius: 9 },
+  value: { fontSize: 15, fontWeight: '800', color: COLORS.text, width: 28, textAlign: 'right' },
 });
-
-// Progress circle using views (web-compatible)
-const ProgressCircle = ({ percent, size = 90 }) => {
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
-  useEffect(() => {
-    Animated.timing(fadeAnim, {
-      toValue: 1, duration: 600, delay: 200, useNativeDriver: true,
-    }).start();
-  }, []);
-
-  const clampedPercent = Math.min(Math.max(percent, 0), 100);
-  const color = clampedPercent >= 75 ? COLORS.success : clampedPercent >= 40 ? COLORS.honey : COLORS.statusPending;
-
-  return (
-    <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
-      <View style={{
-        width: size, height: size, borderRadius: size / 2,
-        borderWidth: 8, borderColor: COLORS.textMuted + '20',
-        alignItems: 'center', justifyContent: 'center',
-      }}>
-        {/* Colored arc overlay using quarter-circle technique */}
-        <View style={{
-          position: 'absolute', width: size, height: size, borderRadius: size / 2,
-          borderWidth: 8,
-          borderTopColor: clampedPercent > 0 ? color : 'transparent',
-          borderRightColor: clampedPercent > 25 ? color : 'transparent',
-          borderBottomColor: clampedPercent > 50 ? color : 'transparent',
-          borderLeftColor: clampedPercent > 75 ? color : 'transparent',
-          transform: [{ rotate: '-45deg' }],
-        }} />
-        <Text style={{ fontSize: 20, fontWeight: '900', color: COLORS.text }}>{Math.round(clampedPercent)}%</Text>
-        <Text style={{ fontSize: 9, color: COLORS.textLight }}>Complete</Text>
-      </View>
-    </Animated.View>
-  );
-};
 
 export default function DashboardScreen() {
   const [tasks, setTasks] = useState([]);
@@ -117,7 +61,6 @@ export default function DashboardScreen() {
   const [sortBy, setSortBy] = useState('priority');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(20)).current;
 
   const fetchTasks = useCallback(async () => {
     const loaded = await loadTasks();
@@ -128,11 +71,9 @@ export default function DashboardScreen() {
     useCallback(() => {
       fetchTasks();
       fadeAnim.setValue(0);
-      slideAnim.setValue(20);
-      Animated.parallel([
-        Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
-      ]).start();
+      Animated.timing(fadeAnim, {
+        toValue: 1, duration: 400, useNativeDriver: true,
+      }).start();
     }, [fetchTasks])
   );
 
@@ -199,124 +140,148 @@ export default function DashboardScreen() {
   });
 
   const stats = getTaskStats(tasks);
-  const completionPct = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
+  const completionPct = stats.total > 0 ? Math.round((stats.done / stats.total) * 100) : 0;
   const maxStat = Math.max(stats.pending, stats.inProgress, stats.done, stats.overdue, 1);
 
   // Category breakdown
-  const categoryBreakdown = {};
+  const catMap = {};
   tasks.forEach(t => {
     const cat = CATEGORIES.find(c => c.key === t.category);
-    const label = cat ? cat.icon + ' ' + (cat.label?.replace(cat.icon + ' ', '') || '') : '📋 Other';
-    categoryBreakdown[label] = (categoryBreakdown[label] || 0) + 1;
+    const key = cat ? cat.key : 'other';
+    const label = cat ? cat.icon + ' ' + cat.label.replace(cat.icon + ' ', '') : '📋 Other';
+    if (!catMap[key]) catMap[key] = { label, count: 0 };
+    catMap[key].count++;
   });
-  const topCategories = Object.entries(categoryBreakdown)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 4);
-  const maxCatVal = topCategories.length > 0 ? Math.max(...topCategories.map(c => c[1]), 1) : 1;
+  const topCats = Object.values(catMap).sort((a, b) => b.count - a.count).slice(0, 4);
+  const maxCat = topCats.length > 0 ? Math.max(...topCats.map(c => c.count)) : 1;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning, Busy Bee! 🐝';
-    if (hour < 17) return 'Good afternoon, Worker Bee! 🍯';
-    return 'Good evening, Honey! 🌙';
+    if (hour < 12) return 'Good morning, Busy Bee!';
+    if (hour < 17) return 'Good afternoon, Worker Bee!';
+    return 'Good evening, Honey!';
   };
 
   const getMoodMessage = () => {
     if (stats.overdue > 0) return NAGGING_MESSAGES[Math.floor(Math.random() * NAGGING_MESSAGES.length)];
-    if (stats.pending === 0 && stats.inProgress === 0) return "The hive is spotless! You're a legend! 🏆";
-    if (stats.completedThisWeek >= 5) return "You've been a busy bee this week! 💪";
-    return `${stats.pending + stats.inProgress} task${stats.pending + stats.inProgress !== 1 ? 's' : ''} buzzing around. Let's go! 🐝`;
+    if (stats.pending === 0 && stats.inProgress === 0) return "The hive is spotless! 🏆";
+    if (stats.completedThisWeek >= 5) return "Busy bee this week! 💪";
+    const count = stats.pending + stats.inProgress;
+    return `${count} task${count !== 1 ? 's' : ''} buzzing around 🐝`;
   };
 
   const renderHeader = () => (
-    <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
-      {/* Greeting Header */}
-      <View style={styles.header}>
-        <View style={styles.headerRow}>
+    <Animated.View style={{ opacity: fadeAnim }}>
+      {/* Header */}
+      <View style={s.header}>
+        <View style={s.headerRow}>
           <View style={{ flex: 1 }}>
-            <Text style={styles.greeting}>{getGreeting()}</Text>
-            <Text style={styles.moodMessage}>{getMoodMessage()}</Text>
+            <Text style={s.greeting}>{getGreeting()}</Text>
+            <Text style={s.moodMsg}>{getMoodMessage()}</Text>
           </View>
-          <Text style={{ fontSize: 42 }}>🐝</Text>
+          <Text style={{ fontSize: 40 }}>🐝</Text>
         </View>
       </View>
 
-      {/* Dashboard Cards */}
-      <View style={styles.dashRow}>
-        {/* Completion Ring */}
-        <View style={styles.dashCard}>
-          <ProgressCircle percent={completionPct} />
-          <Text style={styles.dashCardLabel}>Progress</Text>
+      {/* Stats summary row */}
+      <View style={s.statsRow}>
+        <View style={[s.statBox, { borderTopColor: COLORS.statusPending }]}>
+          <Text style={s.statIcon}>📋</Text>
+          <Text style={[s.statNum, { color: COLORS.statusPending }]}>{stats.pending}</Text>
+          <Text style={s.statLabel}>To Do</Text>
+        </View>
+        <View style={[s.statBox, { borderTopColor: COLORS.statusInProgress }]}>
+          <Text style={s.statIcon}>🔨</Text>
+          <Text style={[s.statNum, { color: COLORS.statusInProgress }]}>{stats.inProgress}</Text>
+          <Text style={s.statLabel}>On It</Text>
+        </View>
+        <View style={[s.statBox, { borderTopColor: COLORS.statusDone }]}>
+          <Text style={s.statIcon}>✅</Text>
+          <Text style={[s.statNum, { color: COLORS.statusDone }]}>{stats.done}</Text>
+          <Text style={s.statLabel}>Done</Text>
+        </View>
+        <View style={[s.statBox, { borderTopColor: COLORS.danger }]}>
+          <Text style={s.statIcon}>🔥</Text>
+          <Text style={[s.statNum, { color: COLORS.danger }]}>{stats.overdue}</Text>
+          <Text style={s.statLabel}>Overdue</Text>
+        </View>
+      </View>
+
+      {/* Progress + Weekly row */}
+      <View style={s.cardsRow}>
+        {/* Completion */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>🍯 Progress</Text>
+          <View style={s.progressRing}>
+            <Text style={s.progressPct}>{completionPct}%</Text>
+          </View>
+          <View style={s.progressBar}>
+            <View style={[s.progressFill, { width: `${completionPct}%` }]} />
+          </View>
+          <Text style={s.progressLabel}>{stats.done} of {stats.total} tasks done</Text>
         </View>
 
-        {/* Weekly Stats */}
-        <View style={[styles.dashCard, { flex: 1 }]}>
-          <Text style={styles.dashCardTitle}>🍯 This Week</Text>
-          <Text style={styles.bigNumber}>{stats.completedThisWeek}</Text>
-          <Text style={styles.bigLabel}>tasks completed</Text>
+        {/* Weekly */}
+        <View style={s.card}>
+          <Text style={s.cardTitle}>🌻 This Week</Text>
+          <Text style={s.bigNum}>{stats.completedThisWeek}</Text>
+          <Text style={s.bigLabel}>completed</Text>
           {stats.averageRating > 0 && (
-            <Text style={styles.ratingText}>{stats.averageRating.toFixed(1)} ⭐ avg rating</Text>
+            <Text style={s.rating}>{stats.averageRating.toFixed(1)} ⭐</Text>
           )}
         </View>
       </View>
 
-      {/* Status Chart */}
-      <View style={styles.chartCard}>
-        <Text style={styles.chartTitle}>📊 Task Status</Text>
-        <AnimatedBar label="📋 To Do" value={stats.pending} maxValue={maxStat} color={COLORS.statusPending} delay={0} />
-        <AnimatedBar label="🔨 On It" value={stats.inProgress} maxValue={maxStat} color={COLORS.statusInProgress} delay={100} />
-        <AnimatedBar label="✅ Done" value={stats.done} maxValue={maxStat} color={COLORS.statusDone} delay={200} />
-        <AnimatedBar label="🔥 Overdue" value={stats.overdue} maxValue={maxStat} color={COLORS.danger} delay={300} />
+      {/* Status chart */}
+      <View style={s.chartBox}>
+        <Text style={s.cardTitle}>📊 Status Breakdown</Text>
+        <StatusBar label="📋 To Do" value={stats.pending} maxValue={maxStat} color={COLORS.statusPending} />
+        <StatusBar label="🔨 On It" value={stats.inProgress} maxValue={maxStat} color={COLORS.statusInProgress} />
+        <StatusBar label="✅ Done" value={stats.done} maxValue={maxStat} color={COLORS.statusDone} />
+        <StatusBar label="🔥 Overdue" value={stats.overdue} maxValue={maxStat} color={COLORS.danger} />
       </View>
 
       {/* Category breakdown */}
-      {topCategories.length > 0 && (
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>🌻 Top Categories</Text>
-          {topCategories.map(([label, count], i) => (
-            <View key={i} style={styles.catRow}>
-              <Text style={styles.catLabel}>{label}</Text>
-              <View style={styles.catTrack}>
-                <View style={[styles.catFill, { width: `${(count / maxCatVal) * 100}%` }]} />
+      {topCats.length > 0 && (
+        <View style={s.chartBox}>
+          <Text style={s.cardTitle}>🌸 Top Categories</Text>
+          {topCats.map((cat, i) => (
+            <View key={i} style={s.catRow}>
+              <Text style={s.catLabel}>{cat.label}</Text>
+              <View style={s.catTrack}>
+                <View style={[s.catFill, { width: `${(cat.count / maxCat) * 100}%` }]} />
               </View>
-              <Text style={styles.catCount}>{count}</Text>
+              <Text style={s.catCount}>{cat.count}</Text>
             </View>
           ))}
         </View>
       )}
 
-      {/* Sort & Filter */}
-      <View style={styles.controlsWrap}>
-        {/* Sort selector */}
+      {/* Sort button */}
+      <View style={s.controlsArea}>
         <View style={{ zIndex: 10 }}>
-          <TouchableOpacity
-            style={styles.sortButton}
-            onPress={() => setShowSortMenu(!showSortMenu)}
-          >
-            <Text style={styles.sortButtonText}>
-              Sort: {SORT_OPTIONS.find(s => s.key === sortBy)?.label} ▾
+          <TouchableOpacity style={s.sortBtn} onPress={() => setShowSortMenu(!showSortMenu)}>
+            <Text style={s.sortBtnText}>
+              Sort: {SORT_OPTIONS.find(o => o.key === sortBy)?.label} ▾
             </Text>
           </TouchableOpacity>
-
           {showSortMenu && (
-            <View style={styles.sortDropdown}>
-              {SORT_OPTIONS.map(s => (
+            <View style={s.sortDrop}>
+              {SORT_OPTIONS.map(o => (
                 <TouchableOpacity
-                  key={s.key}
-                  style={[styles.sortOption, sortBy === s.key && styles.sortOptionActive]}
-                  onPress={() => { setSortBy(s.key); setShowSortMenu(false); }}
+                  key={o.key}
+                  style={[s.sortOpt, sortBy === o.key && s.sortOptActive]}
+                  onPress={() => { setSortBy(o.key); setShowSortMenu(false); }}
                 >
-                  <Text style={[styles.sortOptionText, sortBy === s.key && styles.sortOptionTextActive]}>
-                    {s.label}
-                  </Text>
+                  <Text style={[s.sortOptText, sortBy === o.key && s.sortOptTextActive]}>{o.label}</Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         </View>
 
-        {/* Filter chips */}
-        <View style={styles.filterRow}>
+        {/* Filters */}
+        <View style={s.filterRow}>
           {FILTERS.map((f) => {
             const count = f.key === 'all' ? tasks.length
               : f.key === 'overdue' ? stats.overdue
@@ -324,16 +289,16 @@ export default function DashboardScreen() {
             return (
               <TouchableOpacity
                 key={f.key}
-                style={[styles.filterChip, filter === f.key && styles.filterChipActive]}
+                style={[s.filterChip, filter === f.key && s.filterChipActive]}
                 onPress={() => setFilter(f.key)}
               >
-                <Text style={styles.filterIcon}>{f.icon}</Text>
-                <Text style={[styles.filterLabel, filter === f.key && styles.filterLabelActive]}>
+                <Text style={{ fontSize: 13 }}>{f.icon}</Text>
+                <Text style={[s.filterText, filter === f.key && s.filterTextActive]}>
                   {f.label}
                 </Text>
                 {count > 0 && (
-                  <View style={[styles.badge, filter === f.key && styles.badgeActive]}>
-                    <Text style={[styles.badgeText, filter === f.key && styles.badgeTextActive]}>{count}</Text>
+                  <View style={[s.fBadge, filter === f.key && s.fBadgeActive]}>
+                    <Text style={[s.fBadgeText, filter === f.key && s.fBadgeTextActive]}>{count}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -342,7 +307,7 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      <Text style={styles.taskCount}>
+      <Text style={s.taskCount}>
         {sortedTasks.length} task{sortedTasks.length !== 1 ? 's' : ''}
         {filter !== 'all' ? ` · ${FILTERS.find(f => f.key === filter)?.label}` : ''}
       </Text>
@@ -350,23 +315,19 @@ export default function DashboardScreen() {
   );
 
   const renderEmpty = () => (
-    <View style={styles.emptyBox}>
+    <View style={s.emptyBox}>
       <Text style={{ fontSize: 50 }}>{filter === 'all' ? '🐝' : filter === 'done' ? '😅' : '🍯'}</Text>
-      <Text style={styles.emptyTitle}>
+      <Text style={s.emptyTitle}>
         {filter === 'all' ? 'The hive is empty!' : filter === 'done' ? 'Nothing done yet...' : 'Nothing here!'}
       </Text>
-      <Text style={styles.emptySubtitle}>
-        {filter === 'all'
-          ? "No tasks yet! Go add some from the Honey-Do tab! 🐝"
-          : filter === 'done'
-          ? 'Time to get buzzing! 🐝'
-          : 'Looking good in this category!'}
+      <Text style={s.emptySub}>
+        {filter === 'all' ? "Go add some tasks from the Honey-Do tab! 🐝" : filter === 'done' ? 'Time to get buzzing! 🐝' : 'This category is clear!'}
       </Text>
     </View>
   );
 
   return (
-    <View style={styles.container}>
+    <View style={s.container}>
       <FlatList
         data={sortedTasks}
         keyExtractor={(item) => item.id}
@@ -383,10 +344,9 @@ export default function DashboardScreen() {
   );
 }
 
-const styles = StyleSheet.create({
+const s = StyleSheet.create({
   container: { flex: 1, backgroundColor: COLORS.background },
 
-  // Header
   header: {
     backgroundColor: COLORS.primary,
     paddingTop: 55, paddingBottom: 24, paddingHorizontal: 20,
@@ -394,90 +354,103 @@ const styles = StyleSheet.create({
   },
   headerRow: { flexDirection: 'row', alignItems: 'center' },
   greeting: { fontSize: 24, fontWeight: '900', color: COLORS.white },
-  moodMessage: { fontSize: 13, color: COLORS.white + 'CC', marginTop: 4 },
+  moodMsg: { fontSize: 13, color: 'rgba(255,255,255,0.8)', marginTop: 4 },
 
-  // Dashboard cards
-  dashRow: {
-    flexDirection: 'row', marginHorizontal: 16, marginTop: -8, gap: 10,
+  // Stats
+  statsRow: {
+    flexDirection: 'row', marginHorizontal: 12, marginTop: -10, gap: 6,
   },
-  dashCard: {
-    backgroundColor: COLORS.card, borderRadius: 16, padding: 16,
-    alignItems: 'center',
+  statBox: {
+    flex: 1, backgroundColor: COLORS.card, borderRadius: 12, padding: 10,
+    alignItems: 'center', borderTopWidth: 3,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.08, shadowRadius: 4, elevation: 2,
+  },
+  statIcon: { fontSize: 20, marginBottom: 2 },
+  statNum: { fontSize: 22, fontWeight: '900' },
+  statLabel: { fontSize: 10, color: COLORS.textLight, marginTop: 2 },
+
+  // Cards row
+  cardsRow: { flexDirection: 'row', marginHorizontal: 16, marginTop: 10, gap: 10 },
+  card: {
+    flex: 1, backgroundColor: COLORS.card, borderRadius: 16, padding: 16, alignItems: 'center',
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
+    shadowOpacity: 0.08, shadowRadius: 6, elevation: 2,
   },
-  dashCardLabel: { fontSize: 11, color: COLORS.textLight, marginTop: 8, fontWeight: '600' },
-  dashCardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 6 },
-  bigNumber: { fontSize: 42, fontWeight: '900', color: COLORS.secondary },
+  cardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 10 },
+  progressRing: {
+    width: 70, height: 70, borderRadius: 35,
+    borderWidth: 6, borderColor: COLORS.statusDone,
+    alignItems: 'center', justifyContent: 'center', marginBottom: 8,
+  },
+  progressPct: { fontSize: 18, fontWeight: '900', color: COLORS.text },
+  progressBar: {
+    width: '100%', height: 8, backgroundColor: COLORS.textMuted + '25',
+    borderRadius: 4, overflow: 'hidden',
+  },
+  progressFill: { height: '100%', backgroundColor: COLORS.statusDone, borderRadius: 4 },
+  progressLabel: { fontSize: 11, color: COLORS.textLight, marginTop: 6 },
+  bigNum: { fontSize: 40, fontWeight: '900', color: COLORS.secondary },
   bigLabel: { fontSize: 12, color: COLORS.textLight },
-  ratingText: { fontSize: 12, color: COLORS.honey, fontWeight: '600', marginTop: 4 },
+  rating: { fontSize: 12, color: COLORS.honey, fontWeight: '600', marginTop: 4 },
 
-  // Charts
-  chartCard: {
+  // Chart
+  chartBox: {
     backgroundColor: COLORS.card, borderRadius: 16, padding: 16,
     marginHorizontal: 16, marginTop: 10,
     shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
     shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
-  chartTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
-
-  // Categories
   catRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
-  catLabel: { fontSize: 13, width: 90 },
+  catLabel: { fontSize: 13, width: 100 },
   catTrack: { flex: 1, height: 14, backgroundColor: COLORS.textMuted + '18', borderRadius: 7, overflow: 'hidden', marginHorizontal: 8 },
   catFill: { height: '100%', backgroundColor: COLORS.honey, borderRadius: 7 },
   catCount: { fontSize: 13, fontWeight: '700', color: COLORS.text, width: 24, textAlign: 'right' },
 
   // Controls
-  controlsWrap: { marginHorizontal: 16, marginTop: 14 },
-  sortButton: {
+  controlsArea: { marginHorizontal: 16, marginTop: 14 },
+  sortBtn: {
     backgroundColor: COLORS.card, paddingHorizontal: 14, paddingVertical: 10,
     borderRadius: 12, alignSelf: 'flex-start',
     shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
   },
-  sortButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.secondary },
-  sortDropdown: {
+  sortBtnText: { fontSize: 13, fontWeight: '700', color: COLORS.secondary },
+  sortDrop: {
     position: 'absolute', top: 44, left: 0, width: 200, zIndex: 20,
     backgroundColor: COLORS.card, borderRadius: 14, padding: 6,
     shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
   },
-  sortOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10 },
-  sortOptionActive: { backgroundColor: COLORS.primary + '18' },
-  sortOptionText: { fontSize: 14, fontWeight: '600', color: COLORS.text },
-  sortOptionTextActive: { color: COLORS.secondary },
+  sortOpt: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10 },
+  sortOptActive: { backgroundColor: COLORS.primary + '20' },
+  sortOptText: { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  sortOptTextActive: { color: COLORS.secondary, fontWeight: '700' },
 
   // Filters
-  filterRow: {
-    flexDirection: 'row', gap: 6, marginTop: 10, flexWrap: 'wrap',
-  },
+  filterRow: { flexDirection: 'row', gap: 6, marginTop: 10, flexWrap: 'wrap' },
   filterChip: {
-    flexDirection: 'row', alignItems: 'center', gap: 4,
+    flexDirection: 'row', alignItems: 'center', gap: 5,
     paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
-    backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: 'transparent',
+    backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: COLORS.card,
   },
-  filterChipActive: {
-    backgroundColor: COLORS.primary + '18', borderColor: COLORS.primary,
-  },
-  filterIcon: { fontSize: 14 },
-  filterLabel: { fontSize: 13, color: COLORS.textLight, fontWeight: '500' },
-  filterLabelActive: { color: COLORS.secondary, fontWeight: '700' },
-  badge: {
+  filterChipActive: { backgroundColor: COLORS.primary + '20', borderColor: COLORS.primary },
+  filterText: { fontSize: 13, color: COLORS.textLight, fontWeight: '500' },
+  filterTextActive: { color: COLORS.secondary, fontWeight: '700' },
+  fBadge: {
     backgroundColor: COLORS.textMuted + '30', borderRadius: 10,
     paddingHorizontal: 6, paddingVertical: 1, minWidth: 20, alignItems: 'center',
   },
-  badgeActive: { backgroundColor: COLORS.secondary },
-  badgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textLight },
-  badgeTextActive: { color: COLORS.white },
+  fBadgeActive: { backgroundColor: COLORS.secondary },
+  fBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textLight },
+  fBadgeTextActive: { color: COLORS.white },
 
   taskCount: {
     fontSize: 12, color: COLORS.textMuted, fontWeight: '600',
     marginHorizontal: 16, marginTop: 12, marginBottom: 4,
   },
 
-  // Empty
   emptyBox: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 40 },
   emptyTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text, textAlign: 'center', marginTop: 12 },
-  emptySubtitle: { fontSize: 14, color: COLORS.textLight, textAlign: 'center', marginTop: 8, lineHeight: 20 },
+  emptySub: { fontSize: 14, color: COLORS.textLight, textAlign: 'center', marginTop: 8 },
 });
