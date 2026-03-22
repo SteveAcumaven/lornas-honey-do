@@ -14,6 +14,7 @@ import {
 import { COLORS, CATEGORIES, PRIORITY_LEVELS, ROOMS, EFFORT_LEVELS } from '../constants/theme';
 import { addTask } from '../storage/taskStore';
 import DatePicker from '../components/DatePicker';
+import HoneycombHeader from '../components/HoneycombHeader';
 
 const SectionHeader = ({ title, subtitle }) => (
   <View style={styles.sectionHeader}>
@@ -108,11 +109,10 @@ export default function AddTaskScreen({ navigation }) {
     <KeyboardAvoidingView style={styles.container} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.headerEmoji}>🐝</Text>
-          <Text style={styles.headerTitle}>Lorna's Honey-Do List</Text>
-          <Text style={styles.headerSubtitle}>What needs doing around the hive? 🍯</Text>
-        </View>
+        <HoneycombHeader
+          title="Lorna's Honey-Do List"
+          subtitle="What needs doing around the hive? 🍯"
+        />
 
         {/* Title */}
         <SectionHeader title="What needs to be done?" subtitle="Be specific so he can't play dumb 😏" />
@@ -206,31 +206,6 @@ const styles = StyleSheet.create({
   },
   scrollContent: {
     paddingBottom: 20,
-  },
-  header: {
-    backgroundColor: COLORS.primary,
-    paddingTop: 60,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
-    alignItems: 'center',
-    marginBottom: 8,
-  },
-  headerEmoji: {
-    fontSize: 48,
-    marginBottom: 8,
-  },
-  headerTitle: {
-    fontSize: 30,
-    fontWeight: '900',
-    color: COLORS.white,
-    letterSpacing: 1,
-  },
-  headerSubtitle: {
-    fontSize: 14,
-    color: COLORS.white + 'CC',
-    marginTop: 4,
   },
   sectionHeader: {
     paddingHorizontal: 20,
