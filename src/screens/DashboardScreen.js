@@ -9,7 +9,7 @@ import {
   RefreshControl,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
-import { COLORS, ENCOURAGEMENT_MESSAGES, NAGGING_MESSAGES, CATEGORIES } from '../constants/theme';
+import { COLORS, ENCOURAGEMENT_MESSAGES, NAGGING_MESSAGES, CATEGORIES, ROOMS, EFFORT_LEVELS } from '../constants/theme';
 import { loadTasks, updateTask, deleteTask, getTaskStats } from '../storage/taskStore';
 import TaskCard from '../components/TaskCard';
 
@@ -55,6 +55,9 @@ const sb = StyleSheet.create({
 export default function DashboardScreen() {
   const [tasks, setTasks] = useState([]);
   const [filter, setFilter] = useState('all');
+  const [filterCategory, setFilterCategory] = useState('all');
+  const [filterRoom, setFilterRoom] = useState('all');
+  const [filterEffort, setFilterEffort] = useState('all');
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState('priority');
   const [showSortMenu, setShowSortMenu] = useState(false);
@@ -112,9 +115,19 @@ export default function DashboardScreen() {
   };
 
   const filteredTasks = tasks.filter((t) => {
-    if (filter === 'all') return true;
-    if (filter === 'overdue') return t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done';
-    return t.status === filter;
+    // Status filter
+    if (filter !== 'all') {
+      if (filter === 'overdue') {
+        if (!(t.dueDate && new Date(t.dueDate) < new Date() && t.status !== 'done')) return false;
+      } else if (t.status !== filter) return false;
+    }
+    // Category filter
+    if (filterCategory !== 'all' && t.category !== filterCategory) return false;
+    // Room filter
+    if (filterRoom !== 'all' && t.room !== filterRoom) return false;
+    // Effort filter
+    if (filterEffort !== 'all' && t.effort !== filterEffort) return false;
+    return true;
   });
 
   const priorityOrder = { urgent: 0, high: 1, medium: 2, low: 3 };
@@ -272,7 +285,8 @@ export default function DashboardScreen() {
           )}
         </View>
 
-        {/* Filters */}
+        {/* Status Filters */}
+        <Text style={s.filterSectionLabel}>Status</Text>
         <View style={s.filterRow}>
           {FILTERS.map((f) => {
             const count = f.key === 'all' ? tasks.length
@@ -297,11 +311,112 @@ export default function DashboardScreen() {
             );
           })}
         </View>
+
+        {/* Category Filter */}
+        <Text style={s.filterSectionLabel}>Category</Text>
+        <View style={s.filterRow}>
+          <TouchableOpacity
+            style={[s.filterChip, filterCategory === 'all' && s.filterChipActive]}
+            onPress={() => setFilterCategory('all')}
+          >
+            <Text style={[s.filterText, filterCategory === 'all' && s.filterTextActive]}>All</Text>
+          </TouchableOpacity>
+          {CATEGORIES.map((cat) => {
+            const count = tasks.filter(t => t.category === cat.key).length;
+            if (count === 0) return null;
+            return (
+              <TouchableOpacity
+                key={cat.key}
+                style={[s.filterChip, filterCategory === cat.key && s.filterChipActive]}
+                onPress={() => setFilterCategory(filterCategory === cat.key ? 'all' : cat.key)}
+              >
+                <Text style={{ fontSize: 13 }}>{cat.icon}</Text>
+                <Text style={[s.filterText, filterCategory === cat.key && s.filterTextActive]}>
+                  {cat.label.replace(cat.icon + ' ', '')}
+                </Text>
+                <View style={[s.fBadge, filterCategory === cat.key && s.fBadgeActive]}>
+                  <Text style={[s.fBadgeText, filterCategory === cat.key && s.fBadgeTextActive]}>{count}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Room/Where Filter */}
+        <Text style={s.filterSectionLabel}>Where</Text>
+        <View style={s.filterRow}>
+          <TouchableOpacity
+            style={[s.filterChip, filterRoom === 'all' && s.filterChipActive]}
+            onPress={() => setFilterRoom('all')}
+          >
+            <Text style={[s.filterText, filterRoom === 'all' && s.filterTextActive]}>All</Text>
+          </TouchableOpacity>
+          {ROOMS.map((room) => {
+            const count = tasks.filter(t => t.room === room).length;
+            if (count === 0) return null;
+            return (
+              <TouchableOpacity
+                key={room}
+                style={[s.filterChip, filterRoom === room && s.filterChipActive]}
+                onPress={() => setFilterRoom(filterRoom === room ? 'all' : room)}
+              >
+                <Text style={[s.filterText, filterRoom === room && s.filterTextActive]}>
+                  {room}
+                </Text>
+                <View style={[s.fBadge, filterRoom === room && s.fBadgeActive]}>
+                  <Text style={[s.fBadgeText, filterRoom === room && s.fBadgeTextActive]}>{count}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Effort Filter */}
+        <Text style={s.filterSectionLabel}>Effort</Text>
+        <View style={s.filterRow}>
+          <TouchableOpacity
+            style={[s.filterChip, filterEffort === 'all' && s.filterChipActive]}
+            onPress={() => setFilterEffort('all')}
+          >
+            <Text style={[s.filterText, filterEffort === 'all' && s.filterTextActive]}>All</Text>
+          </TouchableOpacity>
+          {EFFORT_LEVELS.map((eff) => {
+            const count = tasks.filter(t => t.effort === eff.key).length;
+            if (count === 0) return null;
+            return (
+              <TouchableOpacity
+                key={eff.key}
+                style={[s.filterChip, filterEffort === eff.key && s.filterChipActive]}
+                onPress={() => setFilterEffort(filterEffort === eff.key ? 'all' : eff.key)}
+              >
+                <Text style={[s.filterText, filterEffort === eff.key && s.filterTextActive]}>
+                  {eff.label.split('(')[0].trim()}
+                </Text>
+                <View style={[s.fBadge, filterEffort === eff.key && s.fBadgeActive]}>
+                  <Text style={[s.fBadgeText, filterEffort === eff.key && s.fBadgeTextActive]}>{count}</Text>
+                </View>
+              </TouchableOpacity>
+            );
+          })}
+        </View>
+
+        {/* Clear all filters */}
+        {(filter !== 'all' || filterCategory !== 'all' || filterRoom !== 'all' || filterEffort !== 'all') && (
+          <TouchableOpacity
+            style={s.clearBtn}
+            onPress={() => { setFilter('all'); setFilterCategory('all'); setFilterRoom('all'); setFilterEffort('all'); }}
+          >
+            <Text style={s.clearBtnText}>✕ Clear all filters</Text>
+          </TouchableOpacity>
+        )}
       </View>
 
       <Text style={s.taskCount}>
         {sortedTasks.length} task{sortedTasks.length !== 1 ? 's' : ''}
         {filter !== 'all' ? ` · ${FILTERS.find(f => f.key === filter)?.label}` : ''}
+        {filterCategory !== 'all' ? ` · ${CATEGORIES.find(c => c.key === filterCategory)?.label}` : ''}
+        {filterRoom !== 'all' ? ` · ${filterRoom}` : ''}
+        {filterEffort !== 'all' ? ` · ${EFFORT_LEVELS.find(e => e.key === filterEffort)?.label.split('(')[0].trim()}` : ''}
       </Text>
     </View>
   );
@@ -436,6 +551,17 @@ const s = StyleSheet.create({
   fBadgeActive: { backgroundColor: COLORS.secondary },
   fBadgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textLight },
   fBadgeTextActive: { color: COLORS.white },
+
+  filterSectionLabel: {
+    fontSize: 12, fontWeight: '700', color: COLORS.textMuted,
+    marginTop: 12, marginBottom: 4, textTransform: 'uppercase', letterSpacing: 1,
+  },
+  clearBtn: {
+    marginTop: 12, alignSelf: 'flex-start',
+    paddingHorizontal: 14, paddingVertical: 8,
+    borderRadius: 20, backgroundColor: COLORS.danger + '15',
+  },
+  clearBtnText: { fontSize: 13, color: COLORS.danger, fontWeight: '600' },
 
   taskCount: {
     fontSize: 12, color: COLORS.textMuted, fontWeight: '600',
