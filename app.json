@@ -1,6 +1,6 @@
 {
   "expo": {
-    "name": "CCodeMobile",
+    "name": "Lorna's Honey-Do List",
     "slug": "CCodeMobile",
     "version": "1.0.0",
     "orientation": "portrait",
@@ -9,21 +9,26 @@
     "splash": {
       "image": "./assets/splash-icon.png",
       "resizeMode": "contain",
-      "backgroundColor": "#ffffff"
+      "backgroundColor": "#FFFDF7"
     },
     "ios": {
       "supportsTablet": true
     },
     "android": {
       "adaptiveIcon": {
-        "backgroundColor": "#E6F4FE",
+        "backgroundColor": "#FFFDF7",
         "foregroundImage": "./assets/android-icon-foreground.png",
         "backgroundImage": "./assets/android-icon-background.png",
         "monochromeImage": "./assets/android-icon-monochrome.png"
       }
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "name": "Lorna's Honey-Do List",
+      "shortName": "Honey-Do",
+      "description": "Lorna's household task manager",
+      "themeColor": "#E8A933",
+      "backgroundColor": "#FFFDF7"
     }
   }
 }
