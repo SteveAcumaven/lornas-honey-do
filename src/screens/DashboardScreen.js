@@ -24,96 +24,89 @@ const FILTERS = [
 ];
 
 const SORT_OPTIONS = [
-  { key: 'priority', label: '🚨 Priority', desc: 'Most urgent first' },
-  { key: 'date', label: '🆕 Newest', desc: 'Recently added' },
-  { key: 'due', label: '📅 Due Date', desc: 'Soonest due first' },
-  { key: 'effort', label: '💪 Effort', desc: 'Quick wins first' },
+  { key: 'priority', label: '🚨 Priority' },
+  { key: 'date', label: '🆕 Newest' },
+  { key: 'due', label: '📅 Due Date' },
+  { key: 'effort', label: '💪 Effort' },
 ];
 
 const effortOrder = { quick: 0, easy: 1, medium: 2, hard: 3, project: 4 };
 
-// Mini bar chart component
-const MiniBarChart = ({ data, height = 50 }) => {
-  const maxVal = Math.max(...data.map(d => d.value), 1);
-  const animValues = useRef(data.map(() => new Animated.Value(0))).current;
+// Simple animated bar
+const AnimatedBar = ({ value, maxValue, color, label, delay = 0 }) => {
+  const widthAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.stagger(80, animValues.map((anim, i) =>
-      Animated.timing(anim, {
-        toValue: data[i].value / maxVal,
-        duration: 600,
-        easing: Easing.out(Easing.back(1.2)),
-        useNativeDriver: false,
-      })
-    )).start();
-  }, [data]);
+    Animated.timing(widthAnim, {
+      toValue: maxValue > 0 ? (value / maxValue) * 100 : 0,
+      duration: 800,
+      delay,
+      easing: Easing.out(Easing.cubic),
+      useNativeDriver: false,
+    }).start();
+  }, [value, maxValue]);
 
   return (
-    <View style={[barStyles.container, { height }]}>
-      {data.map((d, i) => (
-        <View key={i} style={barStyles.barGroup}>
-          <Animated.View
-            style={[
-              barStyles.bar,
-              {
-                backgroundColor: d.color,
-                height: animValues[i].interpolate({
-                  inputRange: [0, 1],
-                  outputRange: [4, height - 16],
-                }),
-              },
-            ]}
-          />
-          <Text style={barStyles.barLabel}>{d.label}</Text>
-        </View>
-      ))}
+    <View style={barStyles.row}>
+      <Text style={barStyles.label}>{label}</Text>
+      <View style={barStyles.track}>
+        <Animated.View
+          style={[barStyles.fill, {
+            backgroundColor: color,
+            width: widthAnim.interpolate({
+              inputRange: [0, 100],
+              outputRange: ['0%', '100%'],
+            }),
+          }]}
+        />
+      </View>
+      <Text style={barStyles.value}>{value}</Text>
     </View>
   );
 };
 
 const barStyles = StyleSheet.create({
-  container: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-around', paddingHorizontal: 8 },
-  barGroup: { alignItems: 'center', flex: 1 },
-  bar: { width: 24, borderRadius: 6, minHeight: 4 },
-  barLabel: { fontSize: 9, color: COLORS.textLight, marginTop: 4, textAlign: 'center' },
+  row: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  label: { fontSize: 12, color: COLORS.textLight, width: 70 },
+  track: { flex: 1, height: 16, backgroundColor: COLORS.textMuted + '18', borderRadius: 8, overflow: 'hidden', marginHorizontal: 8 },
+  fill: { height: '100%', borderRadius: 8, minWidth: 2 },
+  value: { fontSize: 14, fontWeight: '800', color: COLORS.text, width: 28, textAlign: 'right' },
 });
 
-// Circular progress ring
-const ProgressRing = ({ percent, size = 80, strokeWidth = 8, color = COLORS.success }) => {
-  const animValue = useRef(new Animated.Value(0)).current;
-  const circumference = Math.PI * (size - strokeWidth);
+// Progress circle using views (web-compatible)
+const ProgressCircle = ({ percent, size = 90 }) => {
+  const fadeAnim = useRef(new Animated.Value(0)).current;
 
   useEffect(() => {
-    Animated.timing(animValue, {
-      toValue: percent,
-      duration: 1000,
-      easing: Easing.out(Easing.cubic),
-      useNativeDriver: false,
+    Animated.timing(fadeAnim, {
+      toValue: 1, duration: 600, delay: 200, useNativeDriver: true,
     }).start();
-  }, [percent]);
+  }, []);
+
+  const clampedPercent = Math.min(Math.max(percent, 0), 100);
+  const color = clampedPercent >= 75 ? COLORS.success : clampedPercent >= 40 ? COLORS.honey : COLORS.statusPending;
 
   return (
-    <View style={{ width: size, height: size, alignItems: 'center', justifyContent: 'center' }}>
-      {/* Background ring */}
+    <Animated.View style={{ opacity: fadeAnim, alignItems: 'center' }}>
       <View style={{
-        position: 'absolute', width: size, height: size, borderRadius: size / 2,
-        borderWidth: strokeWidth, borderColor: COLORS.textMuted + '20',
-      }} />
-      {/* Animated fill ring */}
-      <Animated.View style={{
-        position: 'absolute', width: size, height: size, borderRadius: size / 2,
-        borderWidth: strokeWidth,
-        borderColor: color,
-        borderTopColor: color,
-        borderRightColor: animValue.interpolate({ inputRange: [0, 25, 50, 75, 100], outputRange: ['transparent', color, color, color, color] }),
-        borderBottomColor: animValue.interpolate({ inputRange: [0, 50, 100], outputRange: ['transparent', 'transparent', color] }),
-        borderLeftColor: animValue.interpolate({ inputRange: [0, 75, 100], outputRange: ['transparent', 'transparent', color] }),
-        transform: [{ rotate: '-90deg' }],
-      }} />
-      {/* Center text */}
-      <Text style={{ fontSize: 18, fontWeight: '900', color: COLORS.text }}>{Math.round(percent)}%</Text>
-      <Text style={{ fontSize: 9, color: COLORS.textLight }}>Done</Text>
-    </View>
+        width: size, height: size, borderRadius: size / 2,
+        borderWidth: 8, borderColor: COLORS.textMuted + '20',
+        alignItems: 'center', justifyContent: 'center',
+      }}>
+        {/* Colored arc overlay using quarter-circle technique */}
+        <View style={{
+          position: 'absolute', width: size, height: size, borderRadius: size / 2,
+          borderWidth: 8,
+          borderTopColor: clampedPercent > 0 ? color : 'transparent',
+          borderRightColor: clampedPercent > 25 ? color : 'transparent',
+          borderBottomColor: clampedPercent > 50 ? color : 'transparent',
+          borderLeftColor: clampedPercent > 75 ? color : 'transparent',
+          transform: [{ rotate: '-45deg' }],
+        }} />
+        <Text style={{ fontSize: 20, fontWeight: '900', color: COLORS.text }}>{Math.round(clampedPercent)}%</Text>
+        <Text style={{ fontSize: 9, color: COLORS.textLight }}>Complete</Text>
+      </View>
+    </Animated.View>
   );
 };
 
@@ -124,7 +117,7 @@ export default function DashboardScreen() {
   const [sortBy, setSortBy] = useState('priority');
   const [showSortMenu, setShowSortMenu] = useState(false);
   const fadeAnim = useRef(new Animated.Value(0)).current;
-  const slideAnim = useRef(new Animated.Value(30)).current;
+  const slideAnim = useRef(new Animated.Value(20)).current;
 
   const fetchTasks = useCallback(async () => {
     const loaded = await loadTasks();
@@ -135,10 +128,10 @@ export default function DashboardScreen() {
     useCallback(() => {
       fetchTasks();
       fadeAnim.setValue(0);
-      slideAnim.setValue(30);
+      slideAnim.setValue(20);
       Animated.parallel([
         Animated.timing(fadeAnim, { toValue: 1, duration: 500, useNativeDriver: true }),
-        Animated.timing(slideAnim, { toValue: 0, duration: 500, easing: Easing.out(Easing.back(1)), useNativeDriver: true }),
+        Animated.timing(slideAnim, { toValue: 0, duration: 500, easing: Easing.out(Easing.cubic), useNativeDriver: true }),
       ]).start();
     }, [fetchTasks])
   );
@@ -164,7 +157,6 @@ export default function DashboardScreen() {
 
   const handleTaskPress = (task) => {
     const options = [{ text: 'Cancel', style: 'cancel' }];
-
     if (task.status !== 'done') {
       options.push({ text: '✅ Mark Done', onPress: () => handleStatusChange(task.id, 'done') });
     }
@@ -180,7 +172,6 @@ export default function DashboardScreen() {
         ]);
       },
     });
-
     const details = [];
     if (task.description) details.push(`📝 ${task.description}`);
     if (task.rewardNote) details.push(`🎁 Reward: ${task.rewardNote}`);
@@ -209,24 +200,25 @@ export default function DashboardScreen() {
 
   const stats = getTaskStats(tasks);
   const completionPct = stats.total > 0 ? (stats.done / stats.total) * 100 : 0;
+  const maxStat = Math.max(stats.pending, stats.inProgress, stats.done, stats.overdue, 1);
 
   // Category breakdown
   const categoryBreakdown = {};
   tasks.forEach(t => {
     const cat = CATEGORIES.find(c => c.key === t.category);
-    const label = cat ? cat.icon : '📋';
+    const label = cat ? cat.icon + ' ' + (cat.label?.replace(cat.icon + ' ', '') || '') : '📋 Other';
     categoryBreakdown[label] = (categoryBreakdown[label] || 0) + 1;
   });
   const topCategories = Object.entries(categoryBreakdown)
     .sort((a, b) => b[1] - a[1])
-    .slice(0, 5)
-    .map(([label, value]) => ({ label, value, color: COLORS.honey }));
+    .slice(0, 4);
+  const maxCatVal = topCategories.length > 0 ? Math.max(...topCategories.map(c => c[1]), 1) : 1;
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning, Busy Bee!';
-    if (hour < 17) return 'Good afternoon, Worker Bee!';
-    return 'Good evening, Honey!';
+    if (hour < 12) return 'Good morning, Busy Bee! 🐝';
+    if (hour < 17) return 'Good afternoon, Worker Bee! 🍯';
+    return 'Good evening, Honey! 🌙';
   };
 
   const getMoodMessage = () => {
@@ -240,99 +232,72 @@ export default function DashboardScreen() {
     <Animated.View style={{ opacity: fadeAnim, transform: [{ translateY: slideAnim }] }}>
       {/* Greeting Header */}
       <View style={styles.header}>
-        <View style={styles.headerTop}>
-          <View style={styles.headerTextArea}>
+        <View style={styles.headerRow}>
+          <View style={{ flex: 1 }}>
             <Text style={styles.greeting}>{getGreeting()}</Text>
             <Text style={styles.moodMessage}>{getMoodMessage()}</Text>
           </View>
-          <Text style={styles.headerBee}>🐝</Text>
+          <Text style={{ fontSize: 42 }}>🐝</Text>
         </View>
       </View>
 
-      {/* Dashboard Cards Row */}
-      <View style={styles.dashboardRow}>
+      {/* Dashboard Cards */}
+      <View style={styles.dashRow}>
         {/* Completion Ring */}
-        <View style={styles.ringCard}>
-          <ProgressRing percent={completionPct} />
-          <Text style={styles.ringLabel}>Completion</Text>
+        <View style={styles.dashCard}>
+          <ProgressCircle percent={completionPct} />
+          <Text style={styles.dashCardLabel}>Progress</Text>
         </View>
 
-        {/* Stats Grid */}
-        <View style={styles.statsGrid}>
-          {[
-            { icon: '📋', value: stats.pending, label: 'To Do', color: COLORS.statusPending },
-            { icon: '🔨', value: stats.inProgress, label: 'In Progress', color: COLORS.statusInProgress },
-            { icon: '✅', value: stats.done, label: 'Done', color: COLORS.statusDone },
-            { icon: '🔥', value: stats.overdue, label: 'Overdue', color: COLORS.danger },
-          ].map((s, i) => (
-            <View key={i} style={styles.miniStat}>
-              <View style={[styles.miniStatDot, { backgroundColor: s.color }]} />
-              <Text style={styles.miniStatValue}>{s.value}</Text>
-              <Text style={styles.miniStatLabel}>{s.label}</Text>
+        {/* Weekly Stats */}
+        <View style={[styles.dashCard, { flex: 1 }]}>
+          <Text style={styles.dashCardTitle}>🍯 This Week</Text>
+          <Text style={styles.bigNumber}>{stats.completedThisWeek}</Text>
+          <Text style={styles.bigLabel}>tasks completed</Text>
+          {stats.averageRating > 0 && (
+            <Text style={styles.ratingText}>{stats.averageRating.toFixed(1)} ⭐ avg rating</Text>
+          )}
+        </View>
+      </View>
+
+      {/* Status Chart */}
+      <View style={styles.chartCard}>
+        <Text style={styles.chartTitle}>📊 Task Status</Text>
+        <AnimatedBar label="📋 To Do" value={stats.pending} maxValue={maxStat} color={COLORS.statusPending} delay={0} />
+        <AnimatedBar label="🔨 On It" value={stats.inProgress} maxValue={maxStat} color={COLORS.statusInProgress} delay={100} />
+        <AnimatedBar label="✅ Done" value={stats.done} maxValue={maxStat} color={COLORS.statusDone} delay={200} />
+        <AnimatedBar label="🔥 Overdue" value={stats.overdue} maxValue={maxStat} color={COLORS.danger} delay={300} />
+      </View>
+
+      {/* Category breakdown */}
+      {topCategories.length > 0 && (
+        <View style={styles.chartCard}>
+          <Text style={styles.chartTitle}>🌻 Top Categories</Text>
+          {topCategories.map(([label, count], i) => (
+            <View key={i} style={styles.catRow}>
+              <Text style={styles.catLabel}>{label}</Text>
+              <View style={styles.catTrack}>
+                <View style={[styles.catFill, { width: `${(count / maxCatVal) * 100}%` }]} />
+              </View>
+              <Text style={styles.catCount}>{count}</Text>
             </View>
           ))}
         </View>
-      </View>
-
-      {/* Charts Row */}
-      <View style={styles.chartsRow}>
-        {/* Status Distribution */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>Status Overview</Text>
-          <MiniBarChart
-            data={[
-              { label: 'To Do', value: stats.pending, color: COLORS.statusPending },
-              { label: 'On It', value: stats.inProgress, color: COLORS.statusInProgress },
-              { label: 'Done', value: stats.done, color: COLORS.statusDone },
-              { label: 'Late', value: stats.overdue, color: COLORS.danger },
-            ]}
-            height={70}
-          />
-        </View>
-
-        {/* Weekly Activity */}
-        <View style={styles.chartCard}>
-          <Text style={styles.chartTitle}>This Week</Text>
-          <View style={styles.weeklyMini}>
-            <Text style={styles.weeklyBigNumber}>{stats.completedThisWeek}</Text>
-            <Text style={styles.weeklyBigLabel}>tasks done</Text>
-            {stats.averageRating > 0 && (
-              <Text style={styles.weeklyRating}>{stats.averageRating.toFixed(1)} ⭐ avg</Text>
-            )}
-          </View>
-        </View>
-      </View>
-
-      {/* Category breakdown if tasks exist */}
-      {topCategories.length > 0 && (
-        <View style={styles.categoryCard}>
-          <Text style={styles.chartTitle}>Top Categories</Text>
-          <View style={styles.categoryBars}>
-            {topCategories.map((cat, i) => {
-              const maxCat = Math.max(...topCategories.map(c => c.value), 1);
-              return (
-                <View key={i} style={styles.categoryRow}>
-                  <Text style={styles.categoryEmoji}>{cat.label}</Text>
-                  <View style={styles.categoryBarBg}>
-                    <Animated.View style={[styles.categoryBarFill, { width: `${(cat.value / maxCat) * 100}%` }]} />
-                  </View>
-                  <Text style={styles.categoryCount}>{cat.value}</Text>
-                </View>
-              );
-            })}
-          </View>
-        </View>
       )}
 
-      {/* Sort & Filter Controls */}
-      <View style={styles.controlsSection}>
-        {/* Sort */}
-        <View style={styles.sortSection}>
-          <TouchableOpacity style={styles.sortTrigger} onPress={() => setShowSortMenu(!showSortMenu)}>
-            <Text style={styles.sortTriggerText}>
-              {SORT_OPTIONS.find(s => s.key === sortBy)?.label || 'Sort'} ▾
+      {/* Sort & Filter */}
+      <View style={styles.controlsWrap}>
+        {/* Sort selector */}
+        <View style={{ zIndex: 10 }}>
+          <TouchableOpacity
+            style={styles.sortButton}
+            onPress={() => setShowSortMenu(!showSortMenu)}
+          >
+            <Text style={styles.sortButtonText}>
+              Sort: {SORT_OPTIONS.find(s => s.key === sortBy)?.label} ▾
             </Text>
           </TouchableOpacity>
+
           {showSortMenu && (
             <View style={styles.sortDropdown}>
               {SORT_OPTIONS.map(s => (
@@ -341,15 +306,16 @@ export default function DashboardScreen() {
                   style={[styles.sortOption, sortBy === s.key && styles.sortOptionActive]}
                   onPress={() => { setSortBy(s.key); setShowSortMenu(false); }}
                 >
-                  <Text style={[styles.sortOptionText, sortBy === s.key && styles.sortOptionTextActive]}>{s.label}</Text>
-                  <Text style={styles.sortOptionDesc}>{s.desc}</Text>
+                  <Text style={[styles.sortOptionText, sortBy === s.key && styles.sortOptionTextActive]}>
+                    {s.label}
+                  </Text>
                 </TouchableOpacity>
               ))}
             </View>
           )}
         </View>
 
-        {/* Filters */}
+        {/* Filter chips */}
         <View style={styles.filterRow}>
           {FILTERS.map((f) => {
             const count = f.key === 'all' ? tasks.length
@@ -362,12 +328,12 @@ export default function DashboardScreen() {
                 onPress={() => setFilter(f.key)}
               >
                 <Text style={styles.filterIcon}>{f.icon}</Text>
-                <Text style={[styles.filterText, filter === f.key && styles.filterTextActive]}>
+                <Text style={[styles.filterLabel, filter === f.key && styles.filterLabelActive]}>
                   {f.label}
                 </Text>
                 {count > 0 && (
-                  <View style={[styles.filterBadge, filter === f.key && styles.filterBadgeActive]}>
-                    <Text style={[styles.filterBadgeText, filter === f.key && styles.filterBadgeTextActive]}>{count}</Text>
+                  <View style={[styles.badge, filter === f.key && styles.badgeActive]}>
+                    <Text style={[styles.badgeText, filter === f.key && styles.badgeTextActive]}>{count}</Text>
                   </View>
                 )}
               </TouchableOpacity>
@@ -376,28 +342,25 @@ export default function DashboardScreen() {
         </View>
       </View>
 
-      {/* Task count */}
       <Text style={styles.taskCount}>
         {sortedTasks.length} task{sortedTasks.length !== 1 ? 's' : ''}
-        {filter !== 'all' ? ` (${filter.replace('_', ' ')})` : ''}
+        {filter !== 'all' ? ` · ${FILTERS.find(f => f.key === filter)?.label}` : ''}
       </Text>
     </Animated.View>
   );
 
   const renderEmpty = () => (
-    <View style={styles.emptyContainer}>
-      <Text style={styles.emptyEmoji}>
-        {filter === 'all' ? '🐝' : filter === 'done' ? '😅' : '🍯'}
-      </Text>
+    <View style={styles.emptyBox}>
+      <Text style={{ fontSize: 50 }}>{filter === 'all' ? '🐝' : filter === 'done' ? '😅' : '🍯'}</Text>
       <Text style={styles.emptyTitle}>
         {filter === 'all' ? 'The hive is empty!' : filter === 'done' ? 'Nothing done yet...' : 'Nothing here!'}
       </Text>
       <Text style={styles.emptySubtitle}>
         {filter === 'all'
-          ? "No tasks yet! Lorna hasn't found the app yet! 😂"
+          ? "No tasks yet! Go add some from the Honey-Do tab! 🐝"
           : filter === 'done'
-          ? 'Time to get buzzing, buddy! 🐝'
-          : 'This category is clear!'}
+          ? 'Time to get buzzing! 🐝'
+          : 'Looking good in this category!'}
       </Text>
     </View>
   );
@@ -412,7 +375,7 @@ export default function DashboardScreen() {
         )}
         ListHeaderComponent={renderHeader}
         ListEmptyComponent={renderEmpty}
-        contentContainerStyle={styles.listContent}
+        contentContainerStyle={{ paddingBottom: 100 }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} colors={[COLORS.primary]} />}
         showsVerticalScrollIndicator={false}
       />
@@ -421,345 +384,100 @@ export default function DashboardScreen() {
 }
 
 const styles = StyleSheet.create({
-  container: {
-    flex: 1,
-    backgroundColor: COLORS.background,
-  },
-  listContent: {
-    paddingBottom: 100,
-  },
+  container: { flex: 1, backgroundColor: COLORS.background },
+
   // Header
   header: {
-    backgroundColor: COLORS.secondary,
-    paddingTop: 55,
-    paddingBottom: 24,
-    paddingHorizontal: 20,
-    borderBottomLeftRadius: 30,
-    borderBottomRightRadius: 30,
+    backgroundColor: COLORS.primary,
+    paddingTop: 55, paddingBottom: 24, paddingHorizontal: 20,
+    borderBottomLeftRadius: 28, borderBottomRightRadius: 28,
   },
-  headerTop: {
-    flexDirection: 'row',
-    alignItems: 'center',
-  },
-  headerTextArea: {
-    flex: 1,
-  },
-  greeting: {
-    fontSize: 24,
-    fontWeight: '900',
-    color: COLORS.white,
-  },
-  moodMessage: {
-    fontSize: 13,
-    color: COLORS.white + 'CC',
-    marginTop: 4,
-  },
-  headerBee: {
-    fontSize: 40,
-  },
+  headerRow: { flexDirection: 'row', alignItems: 'center' },
+  greeting: { fontSize: 24, fontWeight: '900', color: COLORS.white },
+  moodMessage: { fontSize: 13, color: COLORS.white + 'CC', marginTop: 4 },
 
   // Dashboard cards
-  dashboardRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: -10,
-    gap: 10,
+  dashRow: {
+    flexDirection: 'row', marginHorizontal: 16, marginTop: -8, gap: 10,
   },
-  ringCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 16,
+  dashCard: {
+    backgroundColor: COLORS.card, borderRadius: 16, padding: 16,
     alignItems: 'center',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 8,
-    elevation: 3,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.08, shadowRadius: 8, elevation: 3,
   },
-  ringLabel: {
-    fontSize: 11,
-    color: COLORS.textLight,
-    marginTop: 8,
-    fontWeight: '600',
-  },
-  statsGrid: {
-    flex: 1,
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 8,
-  },
-  miniStat: {
-    backgroundColor: COLORS.card,
-    borderRadius: 12,
-    padding: 10,
-    width: '47%',
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  miniStatDot: {
-    width: 8,
-    height: 8,
-    borderRadius: 4,
-  },
-  miniStatValue: {
-    fontSize: 18,
-    fontWeight: '800',
-    color: COLORS.text,
-  },
-  miniStatLabel: {
-    fontSize: 10,
-    color: COLORS.textLight,
-    flex: 1,
-  },
+  dashCardLabel: { fontSize: 11, color: COLORS.textLight, marginTop: 8, fontWeight: '600' },
+  dashCardTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 6 },
+  bigNumber: { fontSize: 42, fontWeight: '900', color: COLORS.secondary },
+  bigLabel: { fontSize: 12, color: COLORS.textLight },
+  ratingText: { fontSize: 12, color: COLORS.honey, fontWeight: '600', marginTop: 4 },
 
   // Charts
-  chartsRow: {
-    flexDirection: 'row',
-    marginHorizontal: 16,
-    marginTop: 10,
-    gap: 10,
-  },
   chartCard: {
-    flex: 1,
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 14,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
+    backgroundColor: COLORS.card, borderRadius: 16, padding: 16,
+    marginHorizontal: 16, marginTop: 10,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.06, shadowRadius: 6, elevation: 2,
   },
-  chartTitle: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.text,
-    marginBottom: 10,
-    textAlign: 'center',
-  },
-  weeklyMini: {
-    alignItems: 'center',
-    paddingVertical: 8,
-  },
-  weeklyBigNumber: {
-    fontSize: 36,
-    fontWeight: '900',
-    color: COLORS.secondary,
-  },
-  weeklyBigLabel: {
-    fontSize: 12,
-    color: COLORS.textLight,
-    marginTop: 2,
-  },
-  weeklyRating: {
-    fontSize: 12,
-    color: COLORS.honey,
-    fontWeight: '600',
-    marginTop: 4,
-  },
+  chartTitle: { fontSize: 14, fontWeight: '700', color: COLORS.text, marginBottom: 12 },
 
-  // Category
-  categoryCard: {
-    backgroundColor: COLORS.card,
-    borderRadius: 16,
-    padding: 14,
-    marginHorizontal: 16,
-    marginTop: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 6,
-    elevation: 2,
-  },
-  categoryBars: {
-    gap: 8,
-  },
-  categoryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-  },
-  categoryEmoji: {
-    fontSize: 18,
-    width: 28,
-    textAlign: 'center',
-  },
-  categoryBarBg: {
-    flex: 1,
-    height: 14,
-    backgroundColor: COLORS.textMuted + '18',
-    borderRadius: 7,
-    overflow: 'hidden',
-  },
-  categoryBarFill: {
-    height: '100%',
-    backgroundColor: COLORS.honey,
-    borderRadius: 7,
-  },
-  categoryCount: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.text,
-    width: 24,
-    textAlign: 'right',
-  },
+  // Categories
+  catRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 8 },
+  catLabel: { fontSize: 13, width: 90 },
+  catTrack: { flex: 1, height: 14, backgroundColor: COLORS.textMuted + '18', borderRadius: 7, overflow: 'hidden', marginHorizontal: 8 },
+  catFill: { height: '100%', backgroundColor: COLORS.honey, borderRadius: 7 },
+  catCount: { fontSize: 13, fontWeight: '700', color: COLORS.text, width: 24, textAlign: 'right' },
 
   // Controls
-  controlsSection: {
-    marginTop: 14,
-    marginHorizontal: 16,
+  controlsWrap: { marginHorizontal: 16, marginTop: 14 },
+  sortButton: {
+    backgroundColor: COLORS.card, paddingHorizontal: 14, paddingVertical: 10,
+    borderRadius: 12, alignSelf: 'flex-start',
+    shadowColor: '#000', shadowOffset: { width: 0, height: 1 },
+    shadowOpacity: 0.06, shadowRadius: 4, elevation: 1,
   },
-  sortSection: {
-    marginBottom: 10,
-    zIndex: 10,
-  },
-  sortTrigger: {
-    backgroundColor: COLORS.card,
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 12,
-    alignSelf: 'flex-start',
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.06,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  sortTriggerText: {
-    fontSize: 13,
-    fontWeight: '700',
-    color: COLORS.secondary,
-  },
+  sortButtonText: { fontSize: 13, fontWeight: '700', color: COLORS.secondary },
   sortDropdown: {
-    position: 'absolute',
-    top: 44,
-    left: 0,
-    right: 0,
-    backgroundColor: COLORS.card,
-    borderRadius: 14,
-    padding: 6,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 12,
-    elevation: 8,
-    zIndex: 20,
+    position: 'absolute', top: 44, left: 0, width: 200, zIndex: 20,
+    backgroundColor: COLORS.card, borderRadius: 14, padding: 6,
+    shadowColor: '#000', shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.15, shadowRadius: 12, elevation: 8,
   },
-  sortOption: {
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    borderRadius: 10,
-  },
-  sortOptionActive: {
-    backgroundColor: COLORS.secondary + '12',
-  },
-  sortOptionText: {
-    fontSize: 14,
-    fontWeight: '600',
-    color: COLORS.text,
-  },
-  sortOptionTextActive: {
-    color: COLORS.secondary,
-  },
-  sortOptionDesc: {
-    fontSize: 11,
-    color: COLORS.textMuted,
-    marginTop: 1,
-  },
+  sortOption: { paddingVertical: 10, paddingHorizontal: 12, borderRadius: 10 },
+  sortOptionActive: { backgroundColor: COLORS.primary + '18' },
+  sortOptionText: { fontSize: 14, fontWeight: '600', color: COLORS.text },
+  sortOptionTextActive: { color: COLORS.secondary },
 
   // Filters
   filterRow: {
-    flexDirection: 'row',
-    gap: 6,
-    flexWrap: 'wrap',
+    flexDirection: 'row', gap: 6, marginTop: 10, flexWrap: 'wrap',
   },
   filterChip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 20,
-    backgroundColor: COLORS.card,
-    gap: 4,
-    borderWidth: 1.5,
-    borderColor: COLORS.card,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.04,
-    shadowRadius: 2,
-    elevation: 1,
+    flexDirection: 'row', alignItems: 'center', gap: 4,
+    paddingHorizontal: 12, paddingVertical: 8, borderRadius: 20,
+    backgroundColor: COLORS.card, borderWidth: 1.5, borderColor: 'transparent',
   },
   filterChipActive: {
-    backgroundColor: COLORS.secondary + '12',
-    borderColor: COLORS.secondary,
+    backgroundColor: COLORS.primary + '18', borderColor: COLORS.primary,
   },
-  filterIcon: {
-    fontSize: 14,
+  filterIcon: { fontSize: 14 },
+  filterLabel: { fontSize: 13, color: COLORS.textLight, fontWeight: '500' },
+  filterLabelActive: { color: COLORS.secondary, fontWeight: '700' },
+  badge: {
+    backgroundColor: COLORS.textMuted + '30', borderRadius: 10,
+    paddingHorizontal: 6, paddingVertical: 1, minWidth: 20, alignItems: 'center',
   },
-  filterText: {
-    fontSize: 13,
-    color: COLORS.textLight,
-    fontWeight: '500',
-  },
-  filterTextActive: {
-    color: COLORS.secondary,
-    fontWeight: '700',
-  },
-  filterBadge: {
-    backgroundColor: COLORS.textMuted + '30',
-    borderRadius: 10,
-    paddingHorizontal: 6,
-    paddingVertical: 1,
-    minWidth: 20,
-    alignItems: 'center',
-  },
-  filterBadgeActive: {
-    backgroundColor: COLORS.secondary,
-  },
-  filterBadgeText: {
-    fontSize: 10,
-    fontWeight: '700',
-    color: COLORS.textLight,
-  },
-  filterBadgeTextActive: {
-    color: COLORS.white,
-  },
+  badgeActive: { backgroundColor: COLORS.secondary },
+  badgeText: { fontSize: 10, fontWeight: '700', color: COLORS.textLight },
+  badgeTextActive: { color: COLORS.white },
+
   taskCount: {
-    fontSize: 12,
-    color: COLORS.textMuted,
-    marginHorizontal: 16,
-    marginTop: 12,
-    marginBottom: 4,
-    fontWeight: '600',
+    fontSize: 12, color: COLORS.textMuted, fontWeight: '600',
+    marginHorizontal: 16, marginTop: 12, marginBottom: 4,
   },
 
   // Empty
-  emptyContainer: {
-    alignItems: 'center',
-    paddingTop: 60,
-    paddingHorizontal: 40,
-  },
-  emptyEmoji: {
-    fontSize: 60,
-    marginBottom: 16,
-  },
-  emptyTitle: {
-    fontSize: 20,
-    fontWeight: '700',
-    color: COLORS.text,
-    textAlign: 'center',
-  },
-  emptySubtitle: {
-    fontSize: 14,
-    color: COLORS.textLight,
-    textAlign: 'center',
-    marginTop: 8,
-    lineHeight: 20,
-  },
+  emptyBox: { alignItems: 'center', paddingTop: 50, paddingHorizontal: 40 },
+  emptyTitle: { fontSize: 20, fontWeight: '700', color: COLORS.text, textAlign: 'center', marginTop: 12 },
+  emptySubtitle: { fontSize: 14, color: COLORS.textLight, textAlign: 'center', marginTop: 8, lineHeight: 20 },
 });
