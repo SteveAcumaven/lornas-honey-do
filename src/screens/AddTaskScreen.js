@@ -80,11 +80,11 @@ export default function AddTaskScreen({ navigation }) {
     ]).start();
 
     const funMessages = [
-      "Added to his list! He can't escape now! 😈",
-      "Task submitted! Let's see how long this takes... ⏱️",
-      "Roger that! Honey has been Do'd! 🫡",
-      "Added! Remember: patience is a virtue... mostly 😅",
-      "On the list! You're the boss! 👑",
+      "Added to the hive! He can't escape now! 🐝",
+      "Buzz buzz! Task submitted! 🍯",
+      "Roger that! The queen bee has spoken! 👑",
+      "Added! The hive is buzzing! 🐝",
+      "On the list! Bee-lieve it! 🍯",
     ];
     Alert.alert(
       '✅ Task Added!',
@@ -109,9 +109,9 @@ export default function AddTaskScreen({ navigation }) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerEmoji}>🏠</Text>
-          <Text style={styles.headerTitle}>Honey-Do</Text>
-          <Text style={styles.headerSubtitle}>What needs doing around the house?</Text>
+          <Text style={styles.headerEmoji}>🐝</Text>
+          <Text style={styles.headerTitle}>Lorna's Honey-Do List</Text>
+          <Text style={styles.headerSubtitle}>What needs doing around the hive? 🍯</Text>
         </View>
 
         {/* Title */}
@@ -185,8 +185,8 @@ export default function AddTaskScreen({ navigation }) {
         {/* Submit */}
         <Animated.View style={{ transform: [{ scale: bounceAnim }] }}>
           <TouchableOpacity style={styles.submitButton} onPress={handleSubmit} activeOpacity={0.8}>
-            <Text style={styles.submitIcon}>📌</Text>
-            <Text style={styles.submitText}>Add to Honey-Do List!</Text>
+            <Text style={styles.submitIcon}>🐝</Text>
+            <Text style={styles.submitText}>Add to the Hive!</Text>
           </TouchableOpacity>
         </Animated.View>
 
@@ -336,7 +336,7 @@ const styles = StyleSheet.create({
     marginTop: 2,
   },
   submitButton: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.secondary,
     marginHorizontal: 16,
     marginTop: 24,
     borderRadius: 16,
@@ -344,7 +344,7 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    shadowColor: COLORS.primary,
+    shadowColor: COLORS.secondary,
     shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.3,
     shadowRadius: 8,

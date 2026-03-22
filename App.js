@@ -44,7 +44,7 @@ export default function App() {
           component={AddTaskScreen}
           options={{
             tabBarIcon: ({ focused }) => (
-              <TabIcon icon="🏠" label="Honey-Do" focused={focused} />
+              <TabIcon icon="🐝" label="Honey-Do" focused={focused} />
             ),
           }}
         />
@@ -53,7 +53,7 @@ export default function App() {
           component={DashboardScreen}
           options={{
             tabBarIcon: ({ focused }) => (
-              <TabIcon icon="📊" label="My Tasks" focused={focused} />
+              <TabIcon icon="🍯" label="My Tasks" focused={focused} />
             ),
           }}
         />

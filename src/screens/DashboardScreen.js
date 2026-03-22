@@ -138,9 +138,9 @@ export default function DashboardScreen() {
 
   const getGreeting = () => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'Good morning, Handyman!';
-    if (hour < 17) return 'Good afternoon, Mr. Fix-It!';
-    return 'Good evening, DIY King!';
+    if (hour < 12) return 'Good morning, Busy Bee! 🐝';
+    if (hour < 17) return 'Good afternoon, Worker Bee! 🍯';
+    return 'Good evening, Honey! 🌙';
   };
 
   const getMoodMessage = () => {
@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.secondary,
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 20,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   sortChipActive: {
-    backgroundColor: COLORS.primary,
+    backgroundColor: COLORS.secondary,
   },
   sortChipText: {
     fontSize: 12,
