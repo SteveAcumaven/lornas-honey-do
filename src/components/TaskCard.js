@@ -46,12 +46,18 @@ export default function TaskCard({ task, onPress, onStatusChange }) {
       activeOpacity={0.7}
     >
       <View style={styles.header}>
-        <Text style={styles.categoryIcon}>{category.icon}</Text>
+        {/* Checkbox */}
+        <TouchableOpacity
+          style={[styles.checkbox, task.status === 'done' && styles.checkboxDone]}
+          onPress={() => onStatusChange?.(task.id, task.status === 'done' ? 'pending' : 'done')}
+        >
+          {task.status === 'done' && <Text style={styles.checkmark}>✓</Text>}
+        </TouchableOpacity>
         <View style={styles.headerText}>
           <Text style={[styles.title, task.status === 'done' && styles.titleDone]} numberOfLines={1}>
             {task.title}
           </Text>
-          <Text style={styles.room}>{task.room}</Text>
+          <Text style={styles.room}>{task.room} • {category.icon} {category.label?.replace(category.icon + ' ', '')}</Text>
         </View>
         <TouchableOpacity
           style={[styles.statusButton, { backgroundColor: statusColors[task.status] }]}
@@ -86,9 +92,29 @@ export default function TaskCard({ task, onPress, onStatusChange }) {
       {isOverdue && task.nagEnabled && (
         <View style={styles.nagRow}>
           <Text style={styles.nagText}>
-            {['😒', '⏰', '🤔', '👀', '📞', '😤', '🛠️'][Math.floor(Math.random() * 7)]}{' '}
+            {['😒', '⏰', '🤔', '👀', '📞', '😤', '🐝'][Math.floor(Math.random() * 7)]}{' '}
             Ahem... this was due already!
           </Text>
+        </View>
+      )}
+
+      {/* Action buttons for incomplete tasks */}
+      {task.status !== 'done' && (
+        <View style={styles.actionRow}>
+          {task.status === 'pending' && (
+            <TouchableOpacity
+              style={styles.actionButton}
+              onPress={() => onStatusChange?.(task.id, 'in_progress')}
+            >
+              <Text style={styles.actionButtonText}>🔨 Start</Text>
+            </TouchableOpacity>
+          )}
+          <TouchableOpacity
+            style={[styles.actionButton, styles.doneButton]}
+            onPress={() => onStatusChange?.(task.id, 'done')}
+          >
+            <Text style={[styles.actionButtonText, styles.doneButtonText]}>✅ Mark Done</Text>
+          </TouchableOpacity>
         </View>
       )}
     </TouchableOpacity>
@@ -120,9 +146,24 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
-  categoryIcon: {
-    fontSize: 28,
+  checkbox: {
+    width: 28,
+    height: 28,
+    borderRadius: 14,
+    borderWidth: 2.5,
+    borderColor: COLORS.textMuted,
     marginRight: 12,
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  checkboxDone: {
+    backgroundColor: COLORS.statusDone,
+    borderColor: COLORS.statusDone,
+  },
+  checkmark: {
+    color: COLORS.white,
+    fontSize: 16,
+    fontWeight: '800',
   },
   headerText: {
     flex: 1,
@@ -196,5 +237,32 @@ const styles = StyleSheet.create({
     fontSize: 12,
     color: COLORS.danger,
     fontWeight: '600',
+  },
+  actionRow: {
+    flexDirection: 'row',
+    marginTop: 12,
+    gap: 8,
+    borderTopWidth: 1,
+    borderTopColor: COLORS.textMuted + '20',
+    paddingTop: 12,
+  },
+  actionButton: {
+    flex: 1,
+    paddingVertical: 8,
+    borderRadius: 10,
+    backgroundColor: COLORS.textMuted + '18',
+    alignItems: 'center',
+  },
+  actionButtonText: {
+    fontSize: 13,
+    fontWeight: '600',
+    color: COLORS.textLight,
+  },
+  doneButton: {
+    backgroundColor: COLORS.statusDone + '18',
+  },
+  doneButtonText: {
+    color: COLORS.statusDone,
+    fontWeight: '700',
   },
 });
