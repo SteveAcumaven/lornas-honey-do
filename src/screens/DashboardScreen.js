@@ -1,4 +1,4 @@
-import React, { useState, useCallback, useRef } from 'react';
+import React, { useState, useCallback } from 'react';
 import {
   View,
   Text,
@@ -6,9 +6,7 @@ import {
   FlatList,
   TouchableOpacity,
   Alert,
-  Animated,
   RefreshControl,
-  Easing,
 } from 'react-native';
 import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, ENCOURAGEMENT_MESSAGES, NAGGING_MESSAGES, CATEGORIES } from '../constants/theme';
@@ -60,8 +58,6 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState('priority');
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const fadeAnim = useRef(new Animated.Value(0)).current;
-
   const fetchTasks = useCallback(async () => {
     const loaded = await loadTasks();
     setTasks(loaded);
@@ -70,10 +66,6 @@ export default function DashboardScreen() {
   useFocusEffect(
     useCallback(() => {
       fetchTasks();
-      fadeAnim.setValue(0);
-      Animated.timing(fadeAnim, {
-        toValue: 1, duration: 400, useNativeDriver: true,
-      }).start();
     }, [fetchTasks])
   );
 
@@ -171,7 +163,7 @@ export default function DashboardScreen() {
   };
 
   const renderHeader = () => (
-    <Animated.View style={{ opacity: fadeAnim }}>
+    <View>
       {/* Header */}
       <View style={s.header}>
         <View style={s.headerRow}>
@@ -311,7 +303,7 @@ export default function DashboardScreen() {
         {sortedTasks.length} task{sortedTasks.length !== 1 ? 's' : ''}
         {filter !== 'all' ? ` · ${FILTERS.find(f => f.key === filter)?.label}` : ''}
       </Text>
-    </Animated.View>
+    </View>
   );
 
   const renderEmpty = () => (
