@@ -294,7 +294,7 @@ const styles = StyleSheet.create({
     paddingBottom: 100,
   },
   header: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
     paddingTop: 60,
     paddingBottom: 24,
     paddingHorizontal: 20,
@@ -391,7 +391,7 @@ const styles = StyleSheet.create({
     backgroundColor: COLORS.card,
   },
   sortChipActive: {
-    backgroundColor: COLORS.secondary,
+    backgroundColor: COLORS.primary,
   },
   sortChipText: {
     fontSize: 12,

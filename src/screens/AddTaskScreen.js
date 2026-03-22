@@ -13,6 +13,7 @@ import {
 } from 'react-native';
 import { COLORS, CATEGORIES, PRIORITY_LEVELS, ROOMS, EFFORT_LEVELS } from '../constants/theme';
 import { addTask } from '../storage/taskStore';
+import DatePicker from '../components/DatePicker';
 
 const SectionHeader = ({ title, subtitle }) => (
   <View style={styles.sectionHeader}>
@@ -47,8 +48,6 @@ export default function AddTaskScreen({ navigation }) {
   const [room, setRoom] = useState('Kitchen');
   const [effort, setEffort] = useState('medium');
   const [dueDate, setDueDate] = useState('');
-  const [toolsNeeded, setToolsNeeded] = useState('');
-  const [suppliesNeeded, setSuppliesNeeded] = useState('');
   const [nagEnabled, setNagEnabled] = useState(true);
   const [rewardNote, setRewardNote] = useState('');
 
@@ -60,11 +59,7 @@ export default function AddTaskScreen({ navigation }) {
       return;
     }
 
-    const parsedDue = dueDate.trim() ? new Date(dueDate.trim()) : null;
-    if (dueDate.trim() && isNaN(parsedDue?.getTime())) {
-      Alert.alert('Invalid Date', 'Please enter the date as YYYY-MM-DD (e.g., 2026-04-01)');
-      return;
-    }
+    const parsedDue = dueDate ? new Date(dueDate) : null;
 
     await addTask({
       title: title.trim(),
@@ -74,8 +69,6 @@ export default function AddTaskScreen({ navigation }) {
       room,
       effort,
       dueDate: parsedDue?.toISOString() || null,
-      toolsNeeded: toolsNeeded.trim(),
-      suppliesNeeded: suppliesNeeded.trim(),
       nagEnabled,
       rewardNote: rewardNote.trim(),
     });
@@ -107,8 +100,6 @@ export default function AddTaskScreen({ navigation }) {
     setRoom('Kitchen');
     setEffort('medium');
     setDueDate('');
-    setToolsNeeded('');
-    setSuppliesNeeded('');
     setNagEnabled(true);
     setRewardNote('');
   };
@@ -118,8 +109,8 @@ export default function AddTaskScreen({ navigation }) {
       <ScrollView style={styles.scroll} contentContainerStyle={styles.scrollContent} showsVerticalScrollIndicator={false}>
         {/* Header */}
         <View style={styles.header}>
-          <Text style={styles.headerEmoji}>📋</Text>
-          <Text style={styles.headerTitle}>New Honey-Do Task</Text>
+          <Text style={styles.headerEmoji}>🏠</Text>
+          <Text style={styles.headerTitle}>Honey-Do</Text>
           <Text style={styles.headerSubtitle}>What needs doing around the house?</Text>
         </View>
 
@@ -165,36 +156,7 @@ export default function AddTaskScreen({ navigation }) {
 
         {/* Due Date */}
         <SectionHeader title="Due Date" subtitle="When does this need to be done by?" />
-        <TextInput
-          style={styles.input}
-          placeholder="YYYY-MM-DD (e.g., 2026-04-01)"
-          placeholderTextColor={COLORS.textMuted}
-          value={dueDate}
-          onChangeText={setDueDate}
-          maxLength={10}
-        />
-
-        {/* Tools Needed */}
-        <SectionHeader title="Tools Needed" subtitle="So he can't say he doesn't have the right tools 🔧" />
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Wrench, screwdriver, ladder..."
-          placeholderTextColor={COLORS.textMuted}
-          value={toolsNeeded}
-          onChangeText={setToolsNeeded}
-          maxLength={200}
-        />
-
-        {/* Supplies Needed */}
-        <SectionHeader title="Supplies to Buy" subtitle="Anything that needs to be purchased first?" />
-        <TextInput
-          style={styles.input}
-          placeholder="e.g., Paint (Benjamin Moore White Dove), new faucet..."
-          placeholderTextColor={COLORS.textMuted}
-          value={suppliesNeeded}
-          onChangeText={setSuppliesNeeded}
-          maxLength={200}
-        />
+        <DatePicker value={dueDate} onChange={setDueDate} />
 
         {/* Reward / Incentive */}
         <SectionHeader title="Reward / Incentive" subtitle="A little motivation never hurts! 🎁" />
@@ -256,13 +218,14 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   headerEmoji: {
-    fontSize: 40,
+    fontSize: 48,
     marginBottom: 8,
   },
   headerTitle: {
-    fontSize: 26,
-    fontWeight: '800',
+    fontSize: 30,
+    fontWeight: '900',
     color: COLORS.white,
+    letterSpacing: 1,
   },
   headerSubtitle: {
     fontSize: 14,
