@@ -1,6 +1,7 @@
-import AsyncStorage from '@react-native-async-storage/async-storage';
+import { db } from '../firebase';
+import { ref, push, set, update, remove, get, onValue } from 'firebase/database';
 
-const TASKS_KEY = '@honeydoo_tasks';
+const TASKS_REF = 'tasks';
 
 export const generateId = () => {
   return Date.now().toString(36) + Math.random().toString(36).substr(2, 9);
@@ -20,7 +21,6 @@ export const createTask = ({
   nagEnabled = true,
   rewardNote = '',
 }) => ({
-  id: generateId(),
   title,
   description,
   category,
@@ -42,47 +42,66 @@ export const createTask = ({
   rating: null,
 });
 
+// Load all tasks once (for pull-to-refresh, etc.)
 export const loadTasks = async () => {
   try {
-    const json = await AsyncStorage.getItem(TASKS_KEY);
-    return json ? JSON.parse(json) : [];
+    const snapshot = await get(ref(db, TASKS_REF));
+    if (!snapshot.exists()) return [];
+    const data = snapshot.val();
+    return Object.entries(data).map(([id, task]) => ({ ...task, id }));
   } catch (e) {
     console.error('Failed to load tasks', e);
     return [];
   }
 };
 
-export const saveTasks = async (tasks) => {
-  try {
-    await AsyncStorage.setItem(TASKS_KEY, JSON.stringify(tasks));
-  } catch (e) {
-    console.error('Failed to save tasks', e);
-  }
+// Subscribe to real-time task updates - returns unsubscribe function
+export const subscribeTasks = (callback) => {
+  const tasksRef = ref(db, TASKS_REF);
+  const unsubscribe = onValue(tasksRef, (snapshot) => {
+    if (!snapshot.exists()) {
+      callback([]);
+      return;
+    }
+    const data = snapshot.val();
+    const tasks = Object.entries(data).map(([id, task]) => ({ ...task, id }));
+    callback(tasks);
+  }, (error) => {
+    console.error('Failed to subscribe to tasks', error);
+    callback([]);
+  });
+  return unsubscribe;
 };
 
 export const addTask = async (taskData) => {
-  const tasks = await loadTasks();
-  const task = createTask(taskData);
-  tasks.unshift(task);
-  await saveTasks(tasks);
-  return task;
+  try {
+    const task = createTask(taskData);
+    const newRef = push(ref(db, TASKS_REF));
+    await set(newRef, task);
+    return { ...task, id: newRef.key };
+  } catch (e) {
+    console.error('Failed to add task', e);
+    return null;
+  }
 };
 
 export const updateTask = async (id, updates) => {
-  const tasks = await loadTasks();
-  const index = tasks.findIndex((t) => t.id === id);
-  if (index !== -1) {
-    tasks[index] = { ...tasks[index], ...updates, updatedAt: new Date().toISOString() };
-    await saveTasks(tasks);
-    return tasks[index];
+  try {
+    const taskRef = ref(db, `${TASKS_REF}/${id}`);
+    await update(taskRef, { ...updates, updatedAt: new Date().toISOString() });
+    return { id, ...updates };
+  } catch (e) {
+    console.error('Failed to update task', e);
+    return null;
   }
-  return null;
 };
 
 export const deleteTask = async (id) => {
-  const tasks = await loadTasks();
-  const filtered = tasks.filter((t) => t.id !== id);
-  await saveTasks(filtered);
+  try {
+    await remove(ref(db, `${TASKS_REF}/${id}`));
+  } catch (e) {
+    console.error('Failed to delete task', e);
+  }
 };
 
 export const getTaskStats = (tasks) => {

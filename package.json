@@ -20,7 +20,8 @@
     "react-native-web": "^0.21.0",
     "react-native-safe-area-context": "^5.7.0",
     "react-native-screens": "^4.24.0",
-    "react-native-uuid": "^2.0.4"
+    "react-native-uuid": "^2.0.4",
+    "firebase": "^11.6.0"
   },
   "private": true
 }
