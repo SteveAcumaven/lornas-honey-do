@@ -1,4 +1,4 @@
-import React, { useState, useCallback } from 'react';
+import React, { useState, useEffect } from 'react';
 import {
   View,
   Text,
@@ -8,9 +8,8 @@ import {
   Alert,
   RefreshControl,
 } from 'react-native';
-import { useFocusEffect } from '@react-navigation/native';
 import { COLORS, ENCOURAGEMENT_MESSAGES, NAGGING_MESSAGES, CATEGORIES, ROOMS, EFFORT_LEVELS } from '../constants/theme';
-import { loadTasks, updateTask, deleteTask, getTaskStats } from '../storage/taskStore';
+import { loadTasks, subscribeTasks, updateTask, deleteTask, getTaskStats } from '../storage/taskStore';
 import TaskCard from '../components/TaskCard';
 
 const FILTERS = [
@@ -61,20 +60,18 @@ export default function DashboardScreen() {
   const [refreshing, setRefreshing] = useState(false);
   const [sortBy, setSortBy] = useState('priority');
   const [showSortMenu, setShowSortMenu] = useState(false);
-  const fetchTasks = useCallback(async () => {
-    const loaded = await loadTasks();
-    setTasks(loaded);
+  // Real-time sync: tasks update automatically on all devices
+  useEffect(() => {
+    const unsubscribe = subscribeTasks((loaded) => {
+      setTasks(loaded);
+    });
+    return () => unsubscribe();
   }, []);
-
-  useFocusEffect(
-    useCallback(() => {
-      fetchTasks();
-    }, [fetchTasks])
-  );
 
   const onRefresh = async () => {
     setRefreshing(true);
-    await fetchTasks();
+    const loaded = await loadTasks();
+    setTasks(loaded);
     setRefreshing(false);
   };
 
@@ -88,7 +85,6 @@ export default function DashboardScreen() {
     } else {
       await updateTask(id, { status: newStatus });
     }
-    fetchTasks();
   };
 
   const handleTaskPress = (task) => {
@@ -104,7 +100,7 @@ export default function DashboardScreen() {
       onPress: () => {
         Alert.alert('Delete Task?', 'Are you sure? Lorna might notice... 🐝', [
           { text: 'Keep It', style: 'cancel' },
-          { text: 'Delete', style: 'destructive', onPress: async () => { await deleteTask(task.id); fetchTasks(); } },
+          { text: 'Delete', style: 'destructive', onPress: async () => { await deleteTask(task.id); } },
         ]);
       },
     });
